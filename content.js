@@ -78,6 +78,10 @@ function createMediaSelectionUI(media) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         
+        const typeIndicator = document.createElement('div');
+        typeIndicator.classList.add('media-type-indicator');
+        typeIndicator.textContent = item.type.toUpperCase();
+        
         let preview;
         if (item.type === 'image') {
             preview = document.createElement('img');
@@ -99,6 +103,7 @@ function createMediaSelectionUI(media) {
         });
         
         mediaWrapper.appendChild(checkbox);
+        mediaWrapper.appendChild(typeIndicator);
         mediaWrapper.appendChild(preview);
         mediaGrid.appendChild(mediaWrapper);
     });
@@ -144,6 +149,42 @@ function createMediaSelectionUI(media) {
     document.addEventListener('keydown', escapeHandler);
 }
 
+function showNoMediaAlert(message) {
+    const alertContainer = document.createElement('div');
+    alertContainer.classList.add('media-selection-overlay');
+
+    const alertBox = document.createElement('div');
+    alertBox.classList.add('media-selection-modal');
+
+    const iconSvg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+    `;
+
+    alertBox.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
+            <div style="margin-bottom: 16px;">
+                ${iconSvg}
+            </div>
+            <h2 style="color: white; margin-bottom: 12px; font-size: 20px; font-weight: 600;">No Media Found</h2>
+            <p style="color: #aaa; margin-bottom: 20px; text-align: center;">${message}</p>
+            <button id="closeNoMediaAlert" class="media-selection-download" style="width: 100%;">Close</button>
+        </div>
+    `;
+
+    alertContainer.addEventListener('click', (e) => {
+        if (e.target === alertContainer || e.target.id === 'closeNoMediaAlert') {
+            document.body.removeChild(alertContainer);
+        }
+    });
+
+    alertContainer.appendChild(alertBox);
+    document.body.appendChild(alertContainer);
+}
+
 function appendDownloadButtonToContextMenus() {
     const contextMenus = document.querySelectorAll('div.x4vbgl9.xp7jhwk.x1k70j0n');
     contextMenus.forEach((menu) => {
@@ -171,10 +212,10 @@ function appendDownloadButtonToContextMenus() {
                     if (media.length > 0) {
                         createMediaSelectionUI(media);
                     } else {
-                        alert('No media found in this post!');
+                        showNoMediaAlert('No media found in this post!');
                     }
                 } else {
-                    alert('Unable to find media for this post.');
+                    showNoMediaAlert('Unable to find media for this post.');
                 }
             });
             

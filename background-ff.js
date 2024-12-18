@@ -1,4 +1,4 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'download') {
         request.urls.forEach((url, index) => {
             const cleanUrl = url.split('?')[0].split('#')[0];
@@ -6,7 +6,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const extension = urlParts[urlParts.length - 1].toLowerCase() || 'jpg';
             const filename = `threads_media_${index + 1}.${extension}`;
 
-            chrome.downloads.download({
+            browser.downloads.download({
                 url: url,
                 filename: filename,
                 saveAs: false

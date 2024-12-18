@@ -167,13 +167,15 @@ function showNoMediaAlert(message) {
     alertBox.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
             <div style="margin-bottom: 16px;">
-                ${iconSvg}
+                ${iconSvg} <!-- Safe SVG inclusion -->
             </div>
             <h2 style="color: white; margin-bottom: 12px; font-size: 20px; font-weight: 600;">No Media Found</h2>
-            <p style="color: #aaa; margin-bottom: 20px; text-align: center;">${message}</p>
+            <p style="color: #aaa; margin-bottom: 20px; text-align: center;"></p> <!-- Placeholder for dynamic text -->
             <button id="closeNoMediaAlert" class="media-selection-download" style="width: 100%;">Close</button>
         </div>
     `;
+
+    alertBox.querySelector('p').textContent = message;
 
     alertContainer.addEventListener('click', (e) => {
         if (e.target === alertContainer || e.target.id === 'closeNoMediaAlert') {
@@ -184,6 +186,7 @@ function showNoMediaAlert(message) {
     alertContainer.appendChild(alertBox);
     document.body.appendChild(alertContainer);
 }
+
 
 function appendDownloadButtonToContextMenus() {
     const contextMenus = document.querySelectorAll('div.x4vbgl9.xp7jhwk.x1k70j0n');

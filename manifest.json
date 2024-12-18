@@ -4,7 +4,6 @@
   "version": "1.0",
   "description": "Download media from Threads posts",
   "permissions": [
-      "activeTab",
       "downloads"
   ],
   "background": {

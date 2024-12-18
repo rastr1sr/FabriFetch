@@ -1,10 +1,14 @@
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+const browserAPI = typeof browser !== 'undefined' ? browser : chrome;
+
+browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'download') {
         request.urls.forEach((url, index) => {
-            const urlParts = url.split('.');
-            const extension = urlParts[urlParts.length - 1].split('?')[0] || 'jpg';
+            const cleanUrl = url.split('?')[0].split('#')[0];
+            const urlParts = cleanUrl.split('.');
+            const extension = urlParts[urlParts.length - 1].toLowerCase() || 'jpg';
             const filename = `threads_media_${index + 1}.${extension}`;
-            chrome.downloads.download({
+
+            browserAPI.downloads.download({
                 url: url,
                 filename: filename,
                 saveAs: false

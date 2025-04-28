@@ -10,9 +10,8 @@
     "https://*.threads.net/*",
     "https://*.threads.com/*"
   ],
-
   "background": {
-    "scripts": ["background-ff.js"]
+    "scripts": ["background.js"]
   },
   "content_scripts": [
     {

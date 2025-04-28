@@ -1,3 +1,17 @@
+const runtime = typeof browser !== 'undefined' ? browser.runtime : chrome.runtime;
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func.apply(this, args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 function extractThreadsMedia(container) {
     const media = [];
     const postImages = container.querySelectorAll('img[alt]:not([alt=""])');
@@ -27,61 +41,67 @@ function extractThreadsMedia(container) {
 function createMediaSelectionUI(media) {
     const overlay = document.createElement('div');
     overlay.classList.add('media-selection-overlay');
-    
+
     const modal = document.createElement('div');
     modal.classList.add('media-selection-modal');
-    
+
     const header = document.createElement('div');
     header.classList.add('media-selection-header');
-    
+
     const title = document.createElement('h2');
     title.textContent = 'Select Media to Download';
-    
+
     const controls = document.createElement('div');
     controls.classList.add('media-selection-controls');
-    
+
     const selectAllCheckbox = document.createElement('input');
     selectAllCheckbox.type = 'checkbox';
     selectAllCheckbox.id = 'select-all-media';
-    
+
     const selectAllLabel = document.createElement('label');
     selectAllLabel.setAttribute('for', 'select-all-media');
     selectAllLabel.textContent = 'Select All';
-    
+
     const closeButton = document.createElement('button');
     closeButton.classList.add('media-selection-close');
     closeButton.textContent = 'X';
     closeButton.addEventListener('click', () => {
-        document.body.removeChild(overlay);
+        if (overlay.parentNode) {
+            document.body.removeChild(overlay);
+        }
+        document.removeEventListener('keydown', escapeHandler);
     });
-    
+
     const mediaGrid = document.createElement('div');
     mediaGrid.classList.add('media-selection-grid');
-    
+
     const downloadButton = document.createElement('button');
     downloadButton.classList.add('media-selection-download');
     downloadButton.textContent = 'Download Selected';
-    
+
     selectAllCheckbox.addEventListener('change', () => {
         const checkboxes = mediaGrid.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach((checkbox) => {
             checkbox.checked = selectAllCheckbox.checked;
             const wrapper = checkbox.closest('.media-wrapper');
-            wrapper.classList.toggle('selected', checkbox.checked);
+            if (wrapper) {
+                 wrapper.classList.toggle('selected', checkbox.checked);
+            }
         });
     });
-    
+
     media.forEach((item, index) => {
         const mediaWrapper = document.createElement('div');
         mediaWrapper.classList.add('media-wrapper');
-        
+        mediaWrapper.dataset.mediaSrc = item.src;
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        
+
         const typeIndicator = document.createElement('div');
         typeIndicator.classList.add('media-type-indicator');
         typeIndicator.textContent = item.type.toUpperCase();
-        
+
         let preview;
         if (item.type === 'image') {
             preview = document.createElement('img');
@@ -92,62 +112,77 @@ function createMediaSelectionUI(media) {
             preview.preload = 'metadata';
         }
         preview.classList.add('media-preview');
-        
-        mediaWrapper.addEventListener('click', () => {
-            checkbox.checked = !checkbox.checked;
-            mediaWrapper.classList.toggle('selected', checkbox.checked);
+
+        mediaWrapper.addEventListener('click', (e) => {
+             if (e.target !== checkbox) {
+                 checkbox.checked = !checkbox.checked;
+                 checkbox.dispatchEvent(new Event('change'));
+             }
         });
-        
+
         checkbox.addEventListener('change', () => {
             mediaWrapper.classList.toggle('selected', checkbox.checked);
         });
-        
+
         mediaWrapper.appendChild(checkbox);
         mediaWrapper.appendChild(typeIndicator);
         mediaWrapper.appendChild(preview);
         mediaGrid.appendChild(mediaWrapper);
     });
-    
+
     downloadButton.addEventListener('click', () => {
-        const selectedMediaItems = Array.from(mediaGrid.querySelectorAll('input[type="checkbox"]:checked'));
-        if (selectedMediaItems.length === 0) {
+        const selectedCheckboxes = mediaGrid.querySelectorAll('.media-wrapper input[type="checkbox"]:checked');
+
+        if (selectedCheckboxes.length === 0) {
             alert('Please select at least one media item to download.');
             return;
         }
-        const urls = selectedMediaItems.map((checkbox) => {
-            const mediaItem = media[Array.from(mediaGrid.children)
-                .indexOf(checkbox.parentElement)];
-            return mediaItem.src;
-        });
-        chrome.runtime.sendMessage({
-            action: 'download',
-            urls
-        });
-        document.body.removeChild(overlay);
+        const urls = Array.from(selectedCheckboxes)
+            .map(checkbox => checkbox.closest('.media-wrapper')?.dataset.mediaSrc)
+            .filter(src => !!src);
+
+        if (urls.length > 0) {
+            runtime.sendMessage({
+                action: 'download',
+                urls
+            }).catch(error => {
+                 console.error("FabriFetch: Error sending download message:", error);
+            });
+            if (overlay.parentNode) {
+                 document.body.removeChild(overlay);
+            }
+             document.removeEventListener('keydown', escapeHandler);
+        } else {
+             console.error("FabriFetch: Could not retrieve media sources for selected items.");
+             alert("An error occurred retrieving download links.");
+        }
     });
-    
+
     controls.appendChild(selectAllCheckbox);
     controls.appendChild(selectAllLabel);
-    
+
     header.appendChild(title);
     header.appendChild(controls);
     header.appendChild(closeButton);
-    
+
     modal.appendChild(header);
     modal.appendChild(mediaGrid);
     modal.appendChild(downloadButton);
-    
+
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-    
+
     const escapeHandler = (e) => {
         if (e.key === 'Escape') {
-            document.body.removeChild(overlay);
+            if (overlay.parentNode) {
+                document.body.removeChild(overlay);
+            }
             document.removeEventListener('keydown', escapeHandler);
         }
     };
     document.addEventListener('keydown', escapeHandler);
 }
+
 
 function showNoMediaAlert(message) {
     const alertContainer = document.createElement('div');
@@ -167,10 +202,10 @@ function showNoMediaAlert(message) {
     alertBox.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; padding: 20px;">
             <div style="margin-bottom: 16px;">
-                ${iconSvg} <!-- Safe SVG inclusion -->
+                ${iconSvg}
             </div>
             <h2 style="color: white; margin-bottom: 12px; font-size: 20px; font-weight: 600;">No Media Found</h2>
-            <p style="color: #aaa; margin-bottom: 20px; text-align: center;"></p> <!-- Placeholder for dynamic text -->
+            <p style="color: #aaa; margin-bottom: 20px; text-align: center;"></p>
             <button id="closeNoMediaAlert" class="media-selection-download" style="width: 100%;">Close</button>
         </div>
     `;
@@ -179,7 +214,9 @@ function showNoMediaAlert(message) {
 
     alertContainer.addEventListener('click', (e) => {
         if (e.target === alertContainer || e.target.id === 'closeNoMediaAlert') {
-            document.body.removeChild(alertContainer);
+            if (alertContainer.parentNode) {
+                document.body.removeChild(alertContainer);
+            }
         }
     });
 
@@ -194,19 +231,19 @@ function appendDownloadButtonToContextMenus() {
         if (!menu.querySelector('.download-icon')) {
             const downloadButton = document.createElement('button');
             downloadButton.classList.add('download-icon');
-            
+
             const downloadIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             downloadIcon.setAttribute('viewBox', '0 0 24 24');
             downloadIcon.setAttribute('width', '20');
             downloadIcon.setAttribute('height', '20');
             downloadIcon.setAttribute('fill', 'currentColor');
-            
+
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', 'M3 17v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-3M12 15l-5-5h3V4h4v6h3l-5 5z');
-            
+
             downloadIcon.appendChild(path);
             downloadButton.appendChild(downloadIcon);
-            
+
             downloadButton.addEventListener('click', (event) => {
                 event.stopPropagation();
                 const postContainer = downloadButton.parentElement?.parentElement.querySelector('div[class="x1xmf6yo"]');
@@ -221,20 +258,30 @@ function appendDownloadButtonToContextMenus() {
                     showNoMediaAlert('Unable to find media for this post.');
                 }
             });
-            
+
             menu.appendChild(downloadButton);
         }
     });
 }
 
-window.addEventListener('load', appendDownloadButtonToContextMenus);
+if (typeof appendDownloadButtonToContextMenus === 'function') {
+     if (document.readyState === 'complete' || document.readyState === 'interactive') {
+         appendDownloadButtonToContextMenus();
+     } else {
+         window.addEventListener('load', appendDownloadButtonToContextMenus, { once: true });
+     }
+}
+
+const debouncedAppendButtons = debounce(appendDownloadButtonToContextMenus, 300);
+
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         if (mutation.addedNodes.length) {
-            appendDownloadButtonToContextMenus();
+            debouncedAppendButtons();
         }
     });
 });
+
 observer.observe(document.body, {
     childList: true,
     subtree: true

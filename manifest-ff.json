@@ -1,19 +1,24 @@
 {
   "manifest_version": 3,
   "name": "FabriFetch",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Download media from Threads posts",
   "permissions": [
-    "activeTab",
     "downloads"
   ],
+  "host_permissions": [
+    "https://*.threads.net/*",
+    "https://*.threads.com/*"
+  ],
+
   "background": {
     "scripts": ["background-ff.js"]
   },
   "content_scripts": [
     {
       "matches": [
-        "https://www.threads.net/*"
+        "https://www.threads.net/*",
+        "https://www.threads.com/*" 
       ],
       "js": [
         "content.js"
@@ -34,7 +39,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "FabriFetch",
+    "default_title": "FabriFetch: Download Threads Media",
     "default_popup": "popup.html"
   },
   "browser_specific_settings": {
